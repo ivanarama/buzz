@@ -179,6 +179,7 @@ class ModelType(enum.Enum):
     HUGGING_FACE = "Hugging Face"
     FASTER_WHISPER = "Faster Whisper"
     OPEN_AI_WHISPER_API = "OpenAI Whisper API"
+    T_ONE = "T-one"
 
     @property
     def supports_initial_prompt(self):
@@ -329,6 +330,8 @@ class TranscriptionModel:
                 return f"Faster Whisper ({self.whisper_model_size})"
             case ModelType.OPEN_AI_WHISPER_API:
                 return "OpenAI Whisper API"
+            case ModelType.T_ONE:
+                return "T-one"
             case _:
                 raise Exception("Unknown model type")
 
@@ -483,6 +486,10 @@ class TranscriptionModel:
             if not _snapshot_is_complete(snapshot_path):
                 return None
             return snapshot_path
+
+        if self.model_type == ModelType.T_ONE:
+            # T-one models are loaded from HuggingFace automatically
+            return ""
 
         raise Exception("Unknown model type")
 

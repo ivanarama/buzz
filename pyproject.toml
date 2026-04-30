@@ -86,6 +86,9 @@ dependencies = [
     "torch>=2.2.2",
     "torchaudio>=2.2.2",
     "datasets>=4.4.1",
+    # T-one Russian ASR model
+    "tone>=0.1.0",
+    "miniaudio>=1.60",
 ]
 repository = "https://github.com/chidiwilliams/buzz"
 documentation = "https://chidiwilliams.github.io/buzz/docs"
@@ -139,6 +142,7 @@ torchaudio = [
     { index = "PyPI", marker = "sys_platform == 'darwin'" },
     { index = "pytorch-cu129", marker = "sys_platform != 'darwin'" },
 ]
+tone = { git = "https://github.com/voicekit-team/T-one", rev = "main" }
 
 [[tool.uv.index]]
 name = "nvidia"

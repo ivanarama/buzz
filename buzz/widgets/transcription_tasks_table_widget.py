@@ -268,6 +268,9 @@ class TranscriptionTasksTableWidget(QTableView):
         self.model().select()
         self.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        # Allow text selection with Ctrl/Cmd + drag
+        self.setTextElideMode(Qt.TextElideMode.ElideNone)
         self.verticalHeader().hide()
         self.setAlternatingRowColors(True)
         
@@ -293,7 +296,13 @@ class TranscriptionTasksTableWidget(QTableView):
 
     def contextMenuEvent(self, event):
         menu = QMenu(self)
-        
+
+        # Add copy action
+        copy_action = menu.addAction(_("Copy"))
+        copy_action.setShortcut(QKeySequence.StandardKey.Copy)
+        copy_action.triggered.connect(self.copy_selected_fields)
+        menu.addSeparator()
+
         # Add transcription actions if a row is selected
         selected_rows = self.selectionModel().selectedRows()
         if selected_rows:
@@ -304,13 +313,13 @@ class TranscriptionTasksTableWidget(QTableView):
                 restart_action = menu.addAction(_("Restart Transcription"))
                 restart_action.triggered.connect(self.on_restart_transcription_action)
                 menu.addSeparator()
-            
+
             rename_action = menu.addAction(_("Rename"))
             rename_action.triggered.connect(self.on_rename_action)
-            
+
             notes_action = menu.addAction(_("Add/Edit Notes"))
             notes_action.triggered.connect(self.on_notes_action)
-        
+
         menu.exec(event.globalPos())
 
     def save_column_visibility(self):
@@ -544,12 +553,26 @@ class TranscriptionTasksTableWidget(QTableView):
 
     def copy_selected_fields(self):
         selected_text = ""
-        for row in self.selectionModel().selectedRows():
-            row_index = row.row()
-            file_name = self.model().data(self.model().index(row_index, Column.FILE.value))
-            url = self.model().data(self.model().index(row_index, Column.URL.value))
+        selected_indexes = self.selectionModel().selectedIndexes()
 
-            selected_text += f"{file_name}{url}\n"
+        # Group by row to maintain column order
+        rows = {}
+        for index in selected_indexes:
+            row = index.row()
+            if row not in rows:
+                rows[row] = []
+            rows[row].append(index.column())
+
+        # Sort rows and columns
+        for row in sorted(rows.keys()):
+            columns = sorted(rows[row])
+            row_text = []
+            for col in columns:
+                text = self.model().data(self.model().index(row, col))
+                if text:
+                    row_text.append(str(text))
+            if row_text:
+                selected_text += "\t".join(row_text) + "\n"
 
         selected_text = selected_text.rstrip("\n")
         QApplication.clipboard().setText(selected_text)

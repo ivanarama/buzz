@@ -302,6 +302,7 @@ dependencies = [
     { name = "keyring" },
     { name = "lameenc" },
     { name = "lhotse" },
+    { name = "miniaudio" },
     { name = "museval" },
     { name = "mypy" },
     { name = "nemo-toolkit", extra = ["asr"], marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
@@ -327,6 +328,7 @@ dependencies = [
     { name = "srt-equalizer" },
     { name = "stable-ts" },
     { name = "submitit" },
+    { name = "tone" },
     { name = "torch", version = "2.2.2", source = { registry = "https://pypi.org/simple/" }, marker = "platform_machine == 'x86_64' and sys_platform == 'darwin'" },
     { name = "torch", version = "2.8.0", source = { registry = "https://pypi.org/simple/" }, marker = "platform_machine != 'x86_64' and sys_platform == 'darwin'" },
     { name = "torch", version = "2.8.0+cu129", source = { registry = "https://download.pytorch.org/whl/cu129" }, marker = "sys_platform != 'darwin'" },
@@ -394,6 +396,7 @@ requires-dist = [
     { name = "keyring", specifier = ">=25.0.0,<26" },
     { name = "lameenc", specifier = ">=1.8.1,<2" },
     { name = "lhotse", specifier = "==1.32.1" },
+    { name = "miniaudio", specifier = ">=1.60" },
     { name = "museval", specifier = ">=0.4.1,<0.5" },
     { name = "mypy", specifier = ">=1.15.0,<2" },
     { name = "nemo-toolkit", extras = ["asr"], marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'", specifier = "==2.5.3" },
@@ -419,6 +422,7 @@ requires-dist = [
     { name = "srt-equalizer", specifier = ">=0.1.10,<0.2" },
     { name = "stable-ts", specifier = ">=2.19.1,<3" },
     { name = "submitit", specifier = ">=1.5.2,<2" },
+    { name = "tone", git = "https://github.com/voicekit-team/T-one?rev=main" },
     { name = "torch", marker = "sys_platform != 'darwin'", specifier = "==2.8.0", index = "https://download.pytorch.org/whl/cu129" },
     { name = "torch", marker = "sys_platform != 'darwin'", specifier = ">=2.2.2", index = "https://download.pytorch.org/whl/cu129" },
     { name = "torch", marker = "sys_platform == 'darwin'", specifier = ">=2.2.2", index = "https://pypi.org/simple/" },
@@ -1296,6 +1300,18 @@ wheels = [
 ]
 
 [[package]]
+name = "hypothesis"
+version = "6.152.1"
+source = { registry = "https://pypi.org/simple/" }
+dependencies = [
+    { name = "sortedcontainers" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/64/b1/c32bcddb9aab9e3abc700f1f56faf14e7655c64a16ca47701a57362276ea/hypothesis-6.152.1.tar.gz", hash = "sha256:4f4ed934eee295dd84ee97592477d23e8dc03e9f12ae0ee30a4e7c9ef3fca3b0", size = 465029, upload-time = "2026-04-14T22:29:24.062Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5d/83/860fb3075e00b0fc19a22a2301bc3c96f00437558c3911bdd0a3573a4a53/hypothesis-6.152.1-py3-none-any.whl", hash = "sha256:40a3619d9e0cb97b018857c7986f75cf5de2e5ec0fa8a0b172d00747758f749e", size = 530752, upload-time = "2026-04-14T22:29:20.893Z" },
+]
+
+[[package]]
 name = "identify"
 version = "2.6.15"
 source = { registry = "https://pypi.org/simple/" }
@@ -1553,6 +1569,12 @@ dependencies = [
     { name = "numpy", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/80/45/e3e542ffa8970ebd782fcece35e2295de9c60e8c396c2c1a403410d1b24e/kaldi-python-io-1.2.2.tar.gz", hash = "sha256:4ebb4029c6c58296cc0abf96edff02832ba341d290ed37624a8d00105f0f7c00", size = 8814, upload-time = "2021-03-18T12:02:05.832Z" }
+
+[[package]]
+name = "kenlm"
+version = "0.3.0"
+source = { registry = "https://pypi.org/simple/" }
+sdist = { url = "https://files.pythonhosted.org/packages/02/6e/f4e159cef39ea4ef2244b4aa32857d447d60a5d0ee269e1b1f8d3723c03e/kenlm-0.3.0.tar.gz", hash = "sha256:c4628bb9fb63c8a6f9240035b8b037385cfc404cb72e933cf48878291edac1e8", size = 427500, upload-time = "2025-04-07T13:26:38.795Z" }
 
 [[package]]
 name = "keyring"
@@ -1956,6 +1978,25 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/9e/b2/451be65c13d2d69b7601eded7ddd3f150884486715a9b3a705ffb08d0177/mediapy-1.1.6.tar.gz", hash = "sha256:9f44b760400964d8bea5121a213f94dc9a225d026d6a819901283a695e585634", size = 25459, upload-time = "2023-02-24T13:08:42.429Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e3/a0/0d55c59ea8a5f1b13b3eb931e1c0eab9c2a07322cad79cb51a596d2d2a5c/mediapy-1.1.6-py3-none-any.whl", hash = "sha256:c74370808b445666f95272bfdf0eb5707a43b7e05e5527f2dd0830e6892f976f", size = 24955, upload-time = "2023-02-24T13:08:40.53Z" },
+]
+
+[[package]]
+name = "miniaudio"
+version = "1.70"
+source = { registry = "https://pypi.org/simple/" }
+dependencies = [
+    { name = "cffi" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/76/96/9129106469f477af798019f0c6064fe42c795ef4a4d8a4637124fb1ea017/miniaudio-1.70.tar.gz", hash = "sha256:f788504ee2b8ad3092f34b13d72875dba50597a3d25d8af3ac2f8573d31d8c31", size = 1116477, upload-time = "2026-04-18T00:09:28.742Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7c/8d/c01493b78b97c101ce3e28f61466cfdf533da032cf23d7e5aaf029f1bc9f/miniaudio-1.70-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:bfe53c6d47a13c6ae5612444731f4717a3b293990a6048d9486bf69a83e876ea", size = 377173, upload-time = "2026-04-18T00:09:09.176Z" },
+    { url = "https://files.pythonhosted.org/packages/0b/b7/c7868b0b337946dd755f07454f35b63db97ba4c00b47f9cdb519235cdd2f/miniaudio-1.70-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:5c96244596485a42345b8b7094a1917857d0a4f11a25c254ec9cb8562611093d", size = 351475, upload-time = "2026-04-18T00:09:10.317Z" },
+    { url = "https://files.pythonhosted.org/packages/62/d7/231c1a5c0e512fc3e26153fb3a8138794cc8f898a799ac128dd50b08951a/miniaudio-1.70-cp312-cp312-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:4ed1da7e0f903eeea3cecd8c199a39bedf27d782a9de9b81bf1db3d0840c673c", size = 711624, upload-time = "2026-04-18T00:09:11.574Z" },
+    { url = "https://files.pythonhosted.org/packages/d6/92/dae213c7f7beff6712cb0d0413c3394515f61ecd7bb47a270cd61953aeec/miniaudio-1.70-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ec53c807dce88f457375538e7d81b87cc4366502a581f46b3ee4b50e282b7a2c", size = 627217, upload-time = "2026-04-18T00:09:12.769Z" },
+    { url = "https://files.pythonhosted.org/packages/8f/88/61c8cdfa0aad5de7a82ac5b571676066e1c80c7dd5c9e4a637b0fd12764f/miniaudio-1.70-cp312-cp312-musllinux_1_2_i686.whl", hash = "sha256:fcda7999e1c170ae59019f7ddf8cfd48aafcdbc8ebd89c25f917b4910e30090e", size = 725440, upload-time = "2026-04-18T00:09:14.05Z" },
+    { url = "https://files.pythonhosted.org/packages/b2/15/cefe111a4b886e17896b809a9d83560902d2edafd2601545bb6587ba128e/miniaudio-1.70-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:3c7116fd74ed2733a4ef6b4f23224fe968872ea89030917f1bcd5eeb7060d0f1", size = 643476, upload-time = "2026-04-18T00:09:15.493Z" },
+    { url = "https://files.pythonhosted.org/packages/98/24/3a522f05bbd687cd7ef8516db0a309bee0b39ca86b23ed9c7c03e8532694/miniaudio-1.70-cp312-cp312-win32.whl", hash = "sha256:8adda5de804ececcd1810c9522767f87d2afb951fdd9bce0916fb586457bfc69", size = 235094, upload-time = "2026-04-18T00:09:16.849Z" },
+    { url = "https://files.pythonhosted.org/packages/91/2e/9e2874b18ec59d588d4274e759a519fcec174279387507acdddd4b4b2b98/miniaudio-1.70-cp312-cp312-win_amd64.whl", hash = "sha256:e6c66850acafd8bacfa8b39fecc939527783ae2919336bb446c4d7d48e86e612", size = 274249, upload-time = "2026-04-18T00:09:17.892Z" },
 ]
 
 [[package]]
@@ -2982,6 +3023,20 @@ wheels = [
 ]
 
 [[package]]
+name = "pyctcdecode"
+version = "0.5.0"
+source = { registry = "https://pypi.org/simple/" }
+dependencies = [
+    { name = "hypothesis" },
+    { name = "numpy" },
+    { name = "pygtrie" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/61/96/7dec2cb5414c388b94044f25d701ed9d08e30ba2509a4e2cf6451cdd25ed/pyctcdecode-0.5.0.tar.gz", hash = "sha256:f3bcb313e43ca16a54938b3e77b0b375328653bba932668243db745fde513a2c", size = 68451, upload-time = "2023-01-20T21:11:00.944Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a5/8a/93e2118411ae5e861d4f4ce65578c62e85d0f1d9cb389bd63bd57130604e/pyctcdecode-0.5.0-py2.py3-none-any.whl", hash = "sha256:5b4282872ddc8e30fe7ac45112f4ab6134ac67fc03df0bbecf48667d032a0914", size = 39166, upload-time = "2023-01-20T21:10:58.808Z" },
+]
+
+[[package]]
 name = "pydantic"
 version = "2.12.5"
 source = { registry = "https://pypi.org/simple/" }
@@ -3050,6 +3105,15 @@ source = { registry = "https://pypi.org/simple/" }
 sdist = { url = "https://files.pythonhosted.org/packages/b0/77/a5b8c569bf593b0140bde72ea885a803b82086995367bf2037de0159d924/pygments-2.19.2.tar.gz", hash = "sha256:636cb2477cec7f8952536970bc533bc43743542f70392ae026374600add5b887", size = 4968631, upload-time = "2025-06-21T13:39:12.283Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c7/21/705964c7812476f378728bdf590ca4b771ec72385c533964653c68e86bdc/pygments-2.19.2-py3-none-any.whl", hash = "sha256:86540386c03d588bb81d44bc3928634ff26449851e99741617ecb9037ee5ec0b", size = 1225217, upload-time = "2025-06-21T13:39:07.939Z" },
+]
+
+[[package]]
+name = "pygtrie"
+version = "2.5.0"
+source = { registry = "https://pypi.org/simple/" }
+sdist = { url = "https://files.pythonhosted.org/packages/b9/13/55deec25bf09383216fa7f1dfcdbfca40a04aa00b6d15a5cbf25af8fce5f/pygtrie-2.5.0.tar.gz", hash = "sha256:203514ad826eb403dab1d2e2ddd034e0d1534bbe4dbe0213bb0593f66beba4e2", size = 39266, upload-time = "2022-07-16T14:29:47.459Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ec/cd/bd196b2cf014afb1009de8b0f05ecd54011d881944e62763f3c1b1e8ef37/pygtrie-2.5.0-py3-none-any.whl", hash = "sha256:8795cda8105493d5ae159a5bef313ff13156c5d4d72feddefacaad59f8c8ce16", size = 25099, upload-time = "2022-09-23T20:30:05.12Z" },
 ]
 
 [[package]]
@@ -4051,6 +4115,18 @@ source = { registry = "https://pypi.org/simple/" }
 sdist = { url = "https://files.pythonhosted.org/packages/cc/18/0bbf3884e9eaa38819ebe46a7bd25dcd56b67434402b66a58c4b8e552575/tomlkit-0.13.3.tar.gz", hash = "sha256:430cf247ee57df2b94ee3fbe588e71d362a941ebb545dec29b53961d61add2a1", size = 185207, upload-time = "2025-06-05T07:13:44.947Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/bd/75/8539d011f6be8e29f339c42e633aae3cb73bffa95dd0f9adec09b9c58e85/tomlkit-0.13.3-py3-none-any.whl", hash = "sha256:c89c649d79ee40629a9fda55f8ace8c6a1b42deb912b2a8fd8d942ddadb606b0", size = 38901, upload-time = "2025-06-05T07:13:43.546Z" },
+]
+
+[[package]]
+name = "tone"
+version = "0.1.0"
+source = { git = "https://github.com/voicekit-team/T-one?rev=main#3c5b6c015038173840e62cea99e10cdb1c759116" }
+dependencies = [
+    { name = "huggingface-hub" },
+    { name = "kenlm" },
+    { name = "numpy" },
+    { name = "onnxruntime" },
+    { name = "pyctcdecode" },
 ]
 
 [[package]]

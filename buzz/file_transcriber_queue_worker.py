@@ -173,6 +173,9 @@ class FileTranscriberQueueWorker(QObject):
             self.current_transcriber = OpenAIWhisperAPIFileTranscriber(
                 task=self.current_task
             )
+        elif model_type == ModelType.T_ONE:
+            from buzz.transcriber.t_one_file_transcriber import TOneFileTranscriber
+            self.current_transcriber = TOneFileTranscriber(task=self.current_task)
         elif (
             model_type == ModelType.WHISPER_CPP
             or model_type == ModelType.HUGGING_FACE

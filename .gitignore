@@ -34,3 +34,4 @@ benchmarks.json
 /.flatpak-builder
 /repo
 /nemo_msdd_configs
+buzz-debug.log
