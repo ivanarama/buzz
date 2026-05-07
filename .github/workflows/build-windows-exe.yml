@@ -87,10 +87,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Buzz-windows-exe
-          path: dist/Buzz*-windows.exe
+          path: |
+            dist/Buzz*-windows.exe
+            dist/Buzz*-windows-*.bin
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/Buzz*-windows.exe
+          files: |
+            dist/Buzz*-windows.exe
+            dist/Buzz*-windows-*.bin
