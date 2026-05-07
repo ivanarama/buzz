@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.variant }}
   cancel-in-progress: true
 
 jobs:
@@ -16,6 +16,15 @@ jobs:
     timeout-minutes: 90
     env:
       BUZZ_DISABLE_TELEMETRY: true
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: cuda
+            suffix: windows-cuda
+          - variant: cpu
+            suffix: windows-cpu
 
     steps:
       - uses: actions/checkout@v4
@@ -41,7 +50,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .venv
-          key: venv-Windows-${{ runner.arch }}-${{ hashFiles('**/uv.lock') }}
+          key: venv-Windows-${{ matrix.variant }}-${{ hashFiles('**/uv.lock') }}
 
       - name: Setup ffmpeg
         uses: AnimMouse/setup-ffmpeg@v1
@@ -56,12 +65,23 @@ jobs:
         with:
           args: install innosetup --yes
 
-      - name: Install dependencies
+      - name: Install dependencies (CUDA)
+        if: matrix.variant == 'cuda'
         run: |
           uv sync
           uv add msvc-runtime
           uv pip install -U torch==2.8.0+cu129 torchaudio==2.8.0+cu129 --index-url https://download.pytorch.org/whl/cu129
           uv pip install nvidia-cublas-cu12==12.9.1.4 nvidia-cuda-cupti-cu12==12.9.79 nvidia-cuda-runtime-cu12==12.9.79 --extra-index-url https://pypi.ngc.nvidia.com
+          uv cache clean
+          uv run pip cache purge
+        shell: bash
+
+      - name: Install dependencies (CPU)
+        if: matrix.variant == 'cpu'
+        run: |
+          uv sync
+          uv add msvc-runtime
+          uv pip install -U torch==2.8.0+cpu torchaudio==2.8.0+cpu --index-url https://download.pytorch.org/whl/cpu
           uv cache clean
           uv run pip cache purge
         shell: bash
@@ -80,21 +100,34 @@ jobs:
           cp -r ./dll_backup ./buzz/
           uv run make buzz/whisper_cpp
           uv run pyinstaller --noconfirm Buzz.spec
-          iscc installer.iss
         shell: bash
+
+      - name: Package installer (CUDA)
+        if: matrix.variant == 'cuda'
+        run: |
+          $version = (python -c "from buzz.__version__ import VERSION; print(VERSION)")
+          iscc /DAppVersion="$version" /DOutputBaseFilename="Buzz-$version-${{ matrix.suffix }}" installer.iss
+        shell: pwsh
+
+      - name: Package installer (CPU)
+        if: matrix.variant == 'cpu'
+        run: |
+          $version = (python -c "from buzz.__version__ import VERSION; print(VERSION)")
+          iscc /DAppVersion="$version" /DOutputBaseFilename="Buzz-$version-${{ matrix.suffix }}" installer.iss
+        shell: pwsh
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Buzz-windows-exe
+          name: Buzz-${{ matrix.suffix }}
           path: |
-            dist/Buzz*-windows.exe
-            dist/Buzz*-windows-*.bin
+            dist/Buzz*-*.exe
+            dist/Buzz*-*.bin
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            dist/Buzz*-windows.exe
-            dist/Buzz*-windows-*.bin
+            dist/Buzz*-*.exe
+            dist/Buzz*-*.bin
