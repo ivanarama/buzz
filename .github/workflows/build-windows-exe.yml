@@ -1,0 +1,96 @@
+name: Build Windows EXE
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    env:
+      BUZZ_DISABLE_TELEMETRY: true
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Vulkan SDK
+        uses: humbletim/install-vulkan-sdk@v1.2
+        with:
+          version: 1.4.309.0
+          cache: true
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Load cached venv
+        id: cached-uv-dependencies
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-Windows-${{ runner.arch }}-${{ hashFiles('**/uv.lock') }}
+
+      - name: Setup ffmpeg
+        uses: AnimMouse/setup-ffmpeg@v1
+        with:
+          version: "7.1"
+
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Install Inno Setup
+        uses: crazy-max/ghaction-chocolatey@v3
+        with:
+          args: install innosetup --yes
+
+      - name: Install dependencies
+        run: |
+          uv sync
+          uv add msvc-runtime
+          uv pip install -U torch==2.8.0+cu129 torchaudio==2.8.0+cu129 --index-url https://download.pytorch.org/whl/cu129
+          uv pip install nvidia-cublas-cu12==12.9.1.4 nvidia-cuda-cupti-cu12==12.9.79 nvidia-cuda-runtime-cu12==12.9.79 --extra-index-url https://pypi.ngc.nvidia.com
+          uv cache clean
+          uv run pip cache purge
+        shell: bash
+
+      - name: Free disk space
+        run: |
+          rm 'C:\Android\android-sdk\' -r -force
+          rm 'C:\Program Files (x86)\Google\' -r -force
+          rm 'C:\tools\kotlinc\' -r -force
+          rm 'C:\tools\php\' -r -force
+          rm 'C:\selenium\' -r -force
+        shell: pwsh
+
+      - name: Build
+        run: |
+          cp -r ./dll_backup ./buzz/
+          uv run make buzz/whisper_cpp
+          uv run pyinstaller --noconfirm Buzz.spec
+          iscc installer.iss
+        shell: bash
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Buzz-windows-exe
+          path: dist/Buzz*-windows.exe
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/Buzz*-windows.exe
