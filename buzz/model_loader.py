@@ -180,6 +180,7 @@ class ModelType(enum.Enum):
     FASTER_WHISPER = "Faster Whisper"
     OPEN_AI_WHISPER_API = "OpenAI Whisper API"
     GIGAAM = "GigaAM"
+    T_ONE = "T-one"
 
     @property
     def supports_initial_prompt(self):
@@ -202,6 +203,12 @@ class ModelType(enum.Enum):
         if self == ModelType.GIGAAM:
             try:
                 import gigaam  # noqa: F401
+                return True
+            except ImportError:
+                return False
+        if self == ModelType.T_ONE:
+            try:
+                import tone  # noqa: F401
                 return True
             except ImportError:
                 return False
@@ -336,6 +343,8 @@ class TranscriptionModel:
                 return f"Faster Whisper ({self.whisper_model_size})"
             case ModelType.OPEN_AI_WHISPER_API:
                 return "OpenAI Whisper API"
+            case ModelType.T_ONE:
+                return "T-one"
             case ModelType.GIGAAM:
                 return "GigaAM (v3_ctc)"
             case _:
@@ -346,6 +355,7 @@ class TranscriptionModel:
             self.model_type == ModelType.WHISPER
             or self.model_type == ModelType.WHISPER_CPP
             or self.model_type == ModelType.FASTER_WHISPER
+            or self.model_type == ModelType.T_ONE
             or self.model_type == ModelType.GIGAAM
         ) and self.get_local_model_path() is not None
 
@@ -496,6 +506,10 @@ class TranscriptionModel:
                 return None
             return snapshot_path
 
+        if self.model_type == ModelType.T_ONE:
+            # T-one models are loaded from HuggingFace automatically
+            return ""
+
         if self.model_type == ModelType.GIGAAM:
             try:
                 snapshot_path = huggingface_hub.snapshot_download(
@@ -509,18 +523,6 @@ class TranscriptionModel:
                 return None
             if not _snapshot_is_complete(snapshot_path):
                 return None
-
-            # Also verify KenLM model exists
-            try:
-                huggingface_hub.hf_hub_download(
-                    GIGAAM_KENLM_REPO_ID,
-                    "kenlm.bin",
-                    local_files_only=True,
-                    cache_dir=model_root_dir,
-                )
-            except (ValueError, FileNotFoundError):
-                return None
-
             return snapshot_path
 
         raise Exception("Unknown model type")
@@ -827,6 +829,11 @@ class ModelDownloader(QRunnable):
             return
 
         if self.model.model_type == ModelType.OPEN_AI_WHISPER_API:
+            self.signals.finished.emit("")
+            return
+
+        if self.model.model_type == ModelType.T_ONE:
+            # T-one models are loaded from HuggingFace automatically
             self.signals.finished.emit("")
             return
 

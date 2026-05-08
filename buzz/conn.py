@@ -10,6 +10,9 @@ class ConnWriter:
     def write(self, s: str):
         self.conn.send(s.strip())
 
+    def flush(self):
+        pass
+
 
 @contextmanager
 def pipe_stderr(conn: Connection):

@@ -243,12 +243,12 @@ class TranscriptionOptionsGroupBox(QGroupBox):
             self.openai_access_token_edit, model_type == ModelType.OPEN_AI_WHISPER_API
         )
 
-        # GigaAM: hide task and language (Russian only, transcribe only)
+        # T-one/GigaAM: hide task and language (Russian only, transcribe only)
         self.form_layout.setRowVisible(
-            self.tasks_combo_box, model_type != ModelType.GIGAAM
+            self.tasks_combo_box, model_type not in (ModelType.T_ONE, ModelType.GIGAAM)
         )
         self.form_layout.setRowVisible(
-            self.languages_combo_box, model_type != ModelType.GIGAAM
+            self.languages_combo_box, model_type not in (ModelType.T_ONE, ModelType.GIGAAM)
         )
 
         # Note on Apple Silicon Macs
@@ -265,8 +265,8 @@ class TranscriptionOptionsGroupBox(QGroupBox):
         if not model_type.supports_initial_prompt:
             self.transcription_options.initial_prompt = ""
 
-        # GigaAM: lock to Russian language and transcribe task
-        if model_type == ModelType.GIGAAM:
+        # T-one/GigaAM: lock to Russian language and transcribe task
+        if model_type in (ModelType.T_ONE, ModelType.GIGAAM):
             self.transcription_options.language = "ru"
             self.transcription_options.task = Task.TRANSCRIBE
 

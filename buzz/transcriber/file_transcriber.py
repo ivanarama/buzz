@@ -144,9 +144,12 @@ class FileTranscriber(QObject):
                 task=self.transcription_task.transcription_options.task,
             )
 
-            write_output(
-                path=default_path, segments=segments, output_format=output_format
-            )
+            try:
+                write_output(
+                    path=default_path, segments=segments, output_format=output_format
+                )
+            except Exception as exc:
+                logging.exception("Failed to write output file %s", default_path)
 
         if self.transcription_task.source == FileTranscriptionTask.Source.FOLDER_WATCH:
             # Use original_file_path if available (before speech extraction changed file_path)
@@ -155,16 +158,19 @@ class FileTranscriber(QObject):
                 or self.transcription_task.file_path
             )
             if source_path and os.path.exists(source_path):
-                if self.transcription_task.delete_source_file:
-                    os.remove(source_path)
-                else:
-                    shutil.move(
-                        source_path,
-                        os.path.join(
-                            self.transcription_task.output_directory,
-                            os.path.basename(source_path),
-                        ),
-                    )
+                try:
+                    if self.transcription_task.delete_source_file:
+                        os.remove(source_path)
+                    else:
+                        shutil.move(
+                            source_path,
+                            os.path.join(
+                                self.transcription_task.output_directory,
+                                os.path.basename(source_path),
+                            ),
+                        )
+                except Exception as exc:
+                    logging.exception("Failed to move/delete source file %s", source_path)
 
     def on_download_progress(self, data: dict):
         if data["status"] == "downloading":

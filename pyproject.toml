@@ -73,6 +73,10 @@ dependencies = [
     "hf-xet>=1.1.5,<2",
     "hatchling>=1.28.0",
     "cmake>=4.2.0,<5",
+    # GigaAM Russian ASR
+    "gigaam>=0.4.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
+    "pyctcdecode>=0.5.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
+    "sentencepiece>=0.2.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
     # 2.5.3 is last versions with cuda 12
     "nemo-toolkit[asr]==2.5.3; sys_platform != 'darwin' or platform_machine != 'x86_64'",
     "nltk>=3.9.2",
@@ -86,6 +90,9 @@ dependencies = [
     "torch>=2.2.2",
     "torchaudio>=2.2.2",
     "datasets>=4.4.1",
+    # T-one Russian ASR model
+    "tone>=0.1.0",
+    "miniaudio>=1.60",
 ]
 repository = "https://github.com/chidiwilliams/buzz"
 documentation = "https://chidiwilliams.github.io/buzz/docs"
@@ -139,6 +146,7 @@ torchaudio = [
     { index = "PyPI", marker = "sys_platform == 'darwin'" },
     { index = "pytorch-cu129", marker = "sys_platform != 'darwin'" },
 ]
+tone = { git = "https://github.com/voicekit-team/T-one", rev = "main" }
 
 [[tool.uv.index]]
 name = "nvidia"

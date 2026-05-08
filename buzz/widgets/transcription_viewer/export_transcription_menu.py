@@ -1,7 +1,8 @@
 import logging
+import os
 from PyQt6.QtGui import QAction
 from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import QWidget, QMenu, QFileDialog
+from PyQt6.QtWidgets import QWidget, QMenu, QFileDialog, QMessageBox
 
 from buzz.db.entity.transcription import Transcription
 from buzz.db.service.transcription_service import TranscriptionService
@@ -77,13 +78,7 @@ class ExportTranscriptionMenu(QMenu):
             output_format=output_format
         )
 
-        (output_file_path, nil) = QFileDialog.getSaveFileName(
-            self,
-            _("Save File"),
-            default_path,
-            _("Text files") + f" (*.{output_format.value})",
-        )
-
+        output_file_path = self.get_valid_output_path(default_path, output_format)
         if output_file_path == "":
             return
 
@@ -93,3 +88,50 @@ class ExportTranscriptionMenu(QMenu):
             output_format=output_format,
             segment_key=segment_key
         )
+
+    def get_valid_output_path(self, default_path: str, output_format: OutputFormat) -> str:
+        """
+        Ask user for output file path, handling permission errors.
+        Returns the valid path or empty string if user cancelled.
+        """
+        while True:
+            (output_file_path, nil) = QFileDialog.getSaveFileName(
+                self,
+                _("Save File"),
+                default_path,
+                _("Text files") + f" (*.{output_format.value})",
+            )
+
+            if output_file_path == "":
+                return ""
+
+            # Check if we can write to the location
+            output_dir = os.path.dirname(output_file_path)
+            if os.path.exists(output_dir):
+                # Try to create a temporary file to test write permissions
+                try:
+                    test_file = os.path.join(output_dir, '.buzz_write_test')
+                    with open(test_file, 'w') as f:
+                        f.write('test')
+                    os.remove(test_file)
+                    return output_file_path
+                except (PermissionError, OSError):
+                    pass
+
+            # If we get here, we can't write to this location
+            result = QMessageBox.warning(
+                self,
+                _("Cannot Save File"),
+                _("Cannot write to '{path}'.\n\nChoose a different location (like your Desktop or Downloads folder).").format(path=output_file_path),
+                QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+            )
+
+            if result == QMessageBox.StandardButton.Cancel:
+                return ""
+
+            # Update default_path to user's home directory for next dialog
+            default_path = os.path.expanduser("~/~")
+            default_path = os.path.join(
+                os.path.dirname(default_path),
+                os.path.basename(default_path or "export." + output_format.value)
+            )

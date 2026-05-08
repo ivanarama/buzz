@@ -48,6 +48,12 @@ datas += collect_data_files("whisper_diarization", include_py_files=True)
 datas += collect_data_files("deepmultilingualpunctuation", include_py_files=True)
 datas += collect_data_files("ctc_forced_aligner", include_py_files=True, excludes=["build"])
 datas += collect_data_files("nemo", include_py_files=True)
+if platform.system() == "Windows" or platform.system() == "Linux":
+    datas += collect_data_files("gigaam", include_py_files=True)
+try:
+    datas += collect_data_files("tone", include_py_files=True)
+except Exception:
+    pass
 datas += collect_data_files("lightning_fabric", include_py_files=True)
 datas += collect_data_files("pytorch_lightning", include_py_files=True)
 datas += [("buzz/assets/*", "assets")]
@@ -120,6 +126,12 @@ a = Analysis(
         "soundfile",
         "_soundfile_data",
         "lhotse",
+        "tone",
+        "miniaudio",
+        "gigaam",
+        "gigaam.decoding",
+        "pyctcdecode",
+        "sentencepiece",
     ],
     hookspath=[],
     hooksconfig={},
