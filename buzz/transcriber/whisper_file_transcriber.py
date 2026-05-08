@@ -27,6 +27,7 @@ from buzz.transformers_whisper import TransformersTranscriber
 from buzz.transcriber.file_transcriber import FileTranscriber
 from buzz.transcriber.transcriber import FileTranscriptionTask, Segment, Task, DEFAULT_WHISPER_TEMPERATURE
 from buzz.transcriber.whisper_cpp import WhisperCpp
+from buzz.transcriber.gigaam_transcriber import GigaAMTranscriber
 
 import av
 import faster_whisper
@@ -195,6 +196,8 @@ class WhisperFileTranscriber(FileTranscriber):
                     segments = cls.transcribe_faster_whisper(task)
                 elif task.transcription_options.model.model_type == ModelType.WHISPER:
                     segments = cls.transcribe_openai_whisper(task)
+                elif task.transcription_options.model.model_type == ModelType.GIGAAM:
+                    segments = cls.transcribe_gigaam(task)
                 else:
                     raise Exception(
                         f"Invalid model type: {task.transcription_options.model.model_type}"
@@ -212,6 +215,10 @@ class WhisperFileTranscriber(FileTranscriber):
     @classmethod
     def transcribe_whisper_cpp(cls, task: FileTranscriptionTask) -> List[Segment]:
         return WhisperCpp.transcribe(task)
+
+    @classmethod
+    def transcribe_gigaam(cls, task: FileTranscriptionTask) -> List[Segment]:
+        return GigaAMTranscriber.transcribe(task)
 
     @classmethod
     def transcribe_hugging_face(cls, task: FileTranscriptionTask) -> List[Segment]:

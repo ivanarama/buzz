@@ -179,6 +179,7 @@ class ModelType(enum.Enum):
     HUGGING_FACE = "Hugging Face"
     FASTER_WHISPER = "Faster Whisper"
     OPEN_AI_WHISPER_API = "OpenAI Whisper API"
+    GIGAAM = "GigaAM"
 
     @property
     def supports_initial_prompt(self):
@@ -198,6 +199,12 @@ class ModelType(enum.Enum):
                 and platform.system() == "Darwin" and platform.machine() == "x86_64")
         ):
             return False
+        if self == ModelType.GIGAAM:
+            try:
+                import gigaam  # noqa: F401
+                return True
+            except ImportError:
+                return False
         return True
 
     def is_manually_downloadable(self):
@@ -329,6 +336,8 @@ class TranscriptionModel:
                 return f"Faster Whisper ({self.whisper_model_size})"
             case ModelType.OPEN_AI_WHISPER_API:
                 return "OpenAI Whisper API"
+            case ModelType.GIGAAM:
+                return "GigaAM (v3_ctc)"
             case _:
                 raise Exception("Unknown model type")
 
@@ -337,13 +346,15 @@ class TranscriptionModel:
             self.model_type == ModelType.WHISPER
             or self.model_type == ModelType.WHISPER_CPP
             or self.model_type == ModelType.FASTER_WHISPER
+            or self.model_type == ModelType.GIGAAM
         ) and self.get_local_model_path() is not None
 
     def open_file_location(self):
         model_path = self.get_local_model_path()
 
         if (self.model_type == ModelType.HUGGING_FACE
-                or self.model_type == ModelType.FASTER_WHISPER):
+                or self.model_type == ModelType.FASTER_WHISPER
+                or self.model_type == ModelType.GIGAAM):
             model_path = os.path.dirname(model_path)
 
         if model_path is None:
@@ -387,7 +398,8 @@ class TranscriptionModel:
         model_path = self.get_local_model_path()
 
         if self.model_type in (ModelType.HUGGING_FACE,
-                               ModelType.FASTER_WHISPER):
+                               ModelType.FASTER_WHISPER,
+                               ModelType.GIGAAM):
             # Go up two directories to get the huggingface cache root for this model
             # Structure: models--repo--name/snapshots/xxx/files
             model_path = os.path.dirname(os.path.dirname(model_path))
@@ -484,11 +496,54 @@ class TranscriptionModel:
                 return None
             return snapshot_path
 
+        if self.model_type == ModelType.GIGAAM:
+            try:
+                snapshot_path = huggingface_hub.snapshot_download(
+                    GIGAAM_REPO_ID,
+                    allow_patterns=GIGAAM_MODEL_ALLOW_PATTERNS,
+                    local_files_only=True,
+                    cache_dir=model_root_dir,
+                    etag_timeout=60
+                )
+            except (ValueError, FileNotFoundError):
+                return None
+            if not _snapshot_is_complete(snapshot_path):
+                return None
+
+            # Also verify KenLM model exists
+            try:
+                huggingface_hub.hf_hub_download(
+                    GIGAAM_KENLM_REPO_ID,
+                    "kenlm.bin",
+                    local_files_only=True,
+                    cache_dir=model_root_dir,
+                )
+            except (ValueError, FileNotFoundError):
+                return None
+
+            return snapshot_path
+
         raise Exception("Unknown model type")
 
 
 WHISPER_CPP_REPO_ID = "ggerganov/whisper.cpp"
 WHISPER_CPP_LUMII_REPO_ID = "RaivisDejus/whisper.cpp-lv"
+
+GIGAAM_REPO_ID = "salute-developers/GigaAM"
+GIGAAM_KENLM_REPO_ID = "t-tech/T-one"
+
+GIGAAM_MODEL_ALLOW_PATTERNS = [
+    "model.safetensors",
+    "config.json",
+    "tokenizer.json",
+    "tokenizer_config.json",
+    "special_tokens_map.json",
+    "vocab.json",
+]
+
+GIGAAM_KENLM_ALLOW_PATTERNS = [
+    "kenlm.bin",
+]
 
 
 def get_whisper_cpp_file_path(size: WhisperModelSize) -> str:
@@ -773,6 +828,39 @@ class ModelDownloader(QRunnable):
 
         if self.model.model_type == ModelType.OPEN_AI_WHISPER_API:
             self.signals.finished.emit("")
+            return
+
+        if self.model.model_type == ModelType.GIGAAM:
+            model_path = download_from_huggingface(
+                GIGAAM_REPO_ID,
+                allow_patterns=GIGAAM_MODEL_ALLOW_PATTERNS,
+                progress=self.signals.progress,
+                on_process=self._register_process,
+            )
+
+            if self.stopped:
+                return
+
+            if model_path == "":
+                self.signals.error.emit(_("Error"))
+                return
+
+            # Download KenLM language model
+            kenlm_path = download_from_huggingface(
+                GIGAAM_KENLM_REPO_ID,
+                allow_patterns=GIGAAM_KENLM_ALLOW_PATTERNS,
+                progress=self.signals.progress,
+                on_process=self._register_process,
+            )
+
+            if self.stopped:
+                return
+
+            if kenlm_path == "":
+                self.signals.error.emit(_("Error"))
+                return
+
+            self.signals.finished.emit(model_path)
             return
 
         raise Exception("Invalid model type: " + self.model.model_type.value)

@@ -12,6 +12,7 @@ NO_PROGRESS_MODEL_TYPES = {
     ModelType.HUGGING_FACE,
     ModelType.FASTER_WHISPER,
     ModelType.WHISPER_CPP,
+    ModelType.GIGAAM,
 }
 
 

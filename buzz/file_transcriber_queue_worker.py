@@ -178,6 +178,7 @@ class FileTranscriberQueueWorker(QObject):
             or model_type == ModelType.HUGGING_FACE
             or model_type == ModelType.WHISPER
             or model_type == ModelType.FASTER_WHISPER
+            or model_type == ModelType.GIGAAM
         ):
             self.current_transcriber = WhisperFileTranscriber(task=self.current_task)
         else:
