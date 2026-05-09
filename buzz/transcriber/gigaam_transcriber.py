@@ -139,7 +139,8 @@ class GigaAMTranscriber:
         import pyctcdecode
         from transformers import AutoModel
 
-        sys.stderr.write("0%\n")
+        if sys.stderr:
+            sys.stderr.write("0%\n")
 
         force_cpu = os.getenv("BUZZ_FORCE_CPU", "false")
         device = "cuda" if (torch.cuda.is_available() and force_cpu == "false") else "cpu"
@@ -154,9 +155,13 @@ class GigaAMTranscriber:
         gigaam_model = model_wrapper.model
         gigaam_model.to(device).eval()
         if device == "cuda":
-            gigaam_model.encoder.half()
+            try:
+                gigaam_model.encoder.half()
+            except (RuntimeError, torch.AcceleratorError):
+                pass
 
-        sys.stderr.write("20%\n")
+        if sys.stderr:
+            sys.stderr.write("20%\n")
 
         # Build vocab from model config (character-level for v3_ctc)
         vocabulary = gigaam_model.decoding.vocabulary
@@ -166,7 +171,8 @@ class GigaAMTranscriber:
 
         tick_size: float = 1.0 / GIGAAM_FREQ
 
-        sys.stderr.write("30%\n")
+        if sys.stderr:
+            sys.stderr.write("30%\n")
 
         # Load KenLM language model
         kenlm_path = huggingface_hub.hf_hub_download(
@@ -183,13 +189,15 @@ class GigaAMTranscriber:
             beta=1.0,
         )
 
-        sys.stderr.write("40%\n")
+        if sys.stderr:
+            sys.stderr.write("40%\n")
 
         # Load audio
         waveform = _load_audio(task.file_path)
         length = len(waveform) / SAMPLE_RATE
 
-        sys.stderr.write("50%\n")
+        if sys.stderr:
+            sys.stderr.write("50%\n")
 
         # Segment long audio
         audio_segments = _chunk_audio(length, segment_length=30, segment_shift=20)
@@ -209,7 +217,8 @@ class GigaAMTranscriber:
                 log_probs_list.append(lp[0][:encoded_len[0]].cpu().numpy())
 
             progress = 50 + int(40 * (i + 1) / len(audio_segments))
-            sys.stderr.write(f"{progress}%\n")
+            if sys.stderr:
+                sys.stderr.write(f"{progress}%\n")
 
         # Merge overlapping segments
         if len(log_probs_list) == 1:
@@ -242,11 +251,13 @@ class GigaAMTranscriber:
             for word, (s, e) in top_frames
         ]
 
-        sys.stderr.write("95%\n")
+        if sys.stderr:
+            sys.stderr.write("95%\n")
 
         # Format into Buzz segments
         segments = _format_as_segments(words)
 
-        sys.stderr.write("100%\n")
+        if sys.stderr:
+            sys.stderr.write("100%\n")
 
         return segments
