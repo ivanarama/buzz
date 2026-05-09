@@ -3,12 +3,12 @@ import os
 import logging
 from dataclasses import dataclass
 from itertools import groupby, pairwise
-from typing import List, Optional, cast
+from typing import List, cast
 
 import numpy as np
 import torch
 
-from buzz.model_loader import GIGAAM_REPO_ID, GIGAAM_KENLM_REPO_ID, model_root_dir
+from buzz.model_loader import GIGAAM_REPO_ID, GIGAAM_REPO_REVISION, GIGAAM_KENLM_REPO_ID, model_root_dir
 from buzz.transcriber.transcriber import Segment, FileTranscriptionTask
 
 SAMPLE_RATE = 16_000
@@ -135,40 +135,35 @@ def _format_as_segments(words: list[dict], pause_threshold: float = 0.5) -> List
 class GigaAMTranscriber:
     @staticmethod
     def transcribe(task: FileTranscriptionTask) -> List[Segment]:
-        import gigaam
         import huggingface_hub
         import pyctcdecode
-        from gigaam.decoding import Tokenizer
+        from transformers import AutoModel
 
         sys.stderr.write("0%\n")
 
         force_cpu = os.getenv("BUZZ_FORCE_CPU", "false")
         device = "cuda" if (torch.cuda.is_available() and force_cpu == "false") else "cpu"
 
-        # Load GigaAM CTC model
-        gigaam_model = gigaam.load_model(
-            "v3_ctc",
-            fp16_encoder=(device == "cuda"),
-            device=device,
+        # Load GigaAM v3_ctc model via transformers (no gigaam pip package needed)
+        model_wrapper = AutoModel.from_pretrained(
+            GIGAAM_REPO_ID,
+            revision=GIGAAM_REPO_REVISION,
+            trust_remote_code=True,
+            cache_dir=model_root_dir,
         )
-        gigaam_model.eval()
+        gigaam_model = model_wrapper.model
+        gigaam_model.to(device).eval()
+        if device == "cuda":
+            gigaam_model.encoder.half()
 
         sys.stderr.write("20%\n")
 
-        # Build vocab
-        tokenizer = cast("Tokenizer", gigaam_model.decoding.tokenizer)
-        if tokenizer.charwise:
-            vocab = list(gigaam_model.decoding.tokenizer.vocab)
-            vocab.insert(gigaam_model.decoding.blank_id, "")
-        else:
-            from sentencepiece import SentencePieceProcessor
-            sp = cast("SentencePieceProcessor", tokenizer.model)
-            vocab = [
-                cast(str, sp.IdToPiece(i)).replace("▁", " ")
-                for i in range(cast(int, sp.GetPieceSize()))
-            ]
+        # Build vocab from model config (character-level for v3_ctc)
+        vocabulary = gigaam_model.decoding.vocabulary
+        blank_id: int = len(vocabulary)
+        vocab = list(vocabulary)
+        vocab.insert(blank_id, "")
 
-        blank_id: int = gigaam_model.decoding.blank_id
         tick_size: float = 1.0 / GIGAAM_FREQ
 
         sys.stderr.write("30%\n")
@@ -206,8 +201,7 @@ class GigaAMTranscriber:
         for i, seg in enumerate(audio_segments):
             part = waveform[seg.audio_slice()]
             with torch.inference_mode():
-                dtype = gigaam_model._dtype
-                tensor = torch.tensor(part, dtype=dtype).to(device)
+                tensor = torch.tensor(part, dtype=torch.float32).to(device)
                 lengths = torch.tensor([len(part)], device=device)
                 padded = tensor.unsqueeze(0)
                 encoded, encoded_len = gigaam_model.forward(padded, lengths)

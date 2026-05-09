@@ -202,7 +202,7 @@ class ModelType(enum.Enum):
             return False
         if self == ModelType.GIGAAM:
             try:
-                import gigaam  # noqa: F401
+                import pyctcdecode  # noqa: F401
                 return True
             except ImportError:
                 return False
@@ -514,6 +514,7 @@ class TranscriptionModel:
             try:
                 snapshot_path = huggingface_hub.snapshot_download(
                     GIGAAM_REPO_ID,
+                    revision=GIGAAM_REPO_REVISION,
                     allow_patterns=GIGAAM_MODEL_ALLOW_PATTERNS,
                     local_files_only=True,
                     cache_dir=model_root_dir,
@@ -531,16 +532,16 @@ class TranscriptionModel:
 WHISPER_CPP_REPO_ID = "ggerganov/whisper.cpp"
 WHISPER_CPP_LUMII_REPO_ID = "RaivisDejus/whisper.cpp-lv"
 
-GIGAAM_REPO_ID = "salute-developers/GigaAM"
+GIGAAM_REPO_ID = "ai-sage/GigaAM-v3"
+GIGAAM_REPO_REVISION = "ctc"
 GIGAAM_KENLM_REPO_ID = "t-tech/T-one"
 
 GIGAAM_MODEL_ALLOW_PATTERNS = [
-    "model.safetensors",
+    "pytorch_model.bin",
     "config.json",
-    "tokenizer.json",
-    "tokenizer_config.json",
-    "special_tokens_map.json",
-    "vocab.json",
+    "modeling_gigaam.py",
+    "*.json",
+    "*.py",
 ]
 
 GIGAAM_KENLM_ALLOW_PATTERNS = [
@@ -583,7 +584,7 @@ def get_whisper_file_path(size: WhisperModelSize) -> str:
     return os.path.join(root_dir, os.path.basename(url))
 
 
-def _snapshot_download_worker(result_queue, repo_id, allow_patterns, cache_dir, etag_timeout, max_workers):
+def _snapshot_download_worker(result_queue, repo_id, allow_patterns, cache_dir, etag_timeout, max_workers, revision=None):
     """Runs snapshot_download in a child process so it can be killed on cancel."""
     try:
         result = huggingface_hub.snapshot_download(
@@ -592,6 +593,7 @@ def _snapshot_download_worker(result_queue, repo_id, allow_patterns, cache_dir, 
             cache_dir=cache_dir,
             etag_timeout=etag_timeout,
             max_workers=max_workers,
+            **({"revision": revision} if revision else {}),
         )
         result_queue.put(('ok', result))
     except Exception as exc:
@@ -603,6 +605,7 @@ def download_from_huggingface(
         allow_patterns: List[str],
         progress: pyqtSignal(tuple),
         on_process=None,
+        revision: Optional[str] = None,
 ):
     progress.emit((0, 100))
 
@@ -614,7 +617,7 @@ def download_from_huggingface(
     result_queue = multiprocessing.Queue()
     proc = multiprocessing.Process(
         target=_snapshot_download_worker,
-        args=(result_queue, repo_id, allow_patterns, model_root_dir, 60, max_workers),
+        args=(result_queue, repo_id, allow_patterns, model_root_dir, 60, max_workers, revision),
         daemon=True,
     )
     if on_process is not None:
@@ -840,6 +843,7 @@ class ModelDownloader(QRunnable):
         if self.model.model_type == ModelType.GIGAAM:
             model_path = download_from_huggingface(
                 GIGAAM_REPO_ID,
+                revision=GIGAAM_REPO_REVISION,
                 allow_patterns=GIGAAM_MODEL_ALLOW_PATTERNS,
                 progress=self.signals.progress,
                 on_process=self._register_process,

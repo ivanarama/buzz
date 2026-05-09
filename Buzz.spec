@@ -48,8 +48,10 @@ datas += collect_data_files("whisper_diarization", include_py_files=True)
 datas += collect_data_files("deepmultilingualpunctuation", include_py_files=True)
 datas += collect_data_files("ctc_forced_aligner", include_py_files=True, excludes=["build"])
 datas += collect_data_files("nemo", include_py_files=True)
-if platform.system() == "Windows" or platform.system() == "Linux":
+try:
     datas += collect_data_files("gigaam", include_py_files=True)
+except Exception:
+    pass
 try:
     datas += collect_data_files("tone", include_py_files=True)
 except Exception:

@@ -73,8 +73,7 @@ dependencies = [
     "hf-xet>=1.1.5,<2",
     "hatchling>=1.28.0",
     "cmake>=4.2.0,<5",
-    # GigaAM Russian ASR
-    "gigaam>=0.4.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
+    # GigaAM Russian ASR (gigaam pip package conflicts with torch 2.8+, model loaded via huggingface_hub)
     "pyctcdecode>=0.5.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
     "sentencepiece>=0.2.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
     # 2.5.3 is last versions with cuda 12
