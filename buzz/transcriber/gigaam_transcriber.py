@@ -242,27 +242,56 @@ class GigaAMTranscriber:
         merged_clipped = merged.clip(np.log(1e-15), 0)
 
         text = decoder.decode(merged_clipped, beam_width=100)
-
-        # Get word-level timestamps from the best beam
-        beams = decoder.decode_beams(merged_clipped, beam_width=100)
-        if beams:
-            best_beam = beams[0]
-            # pyctcdecode Beam class: .text, .word_start_times, .word_end_times, .words
-            words = []
-            word_starts = best_beam.word_start_times if hasattr(best_beam, 'word_start_times') else []
-            word_ends = best_beam.word_end_times if hasattr(best_beam, 'word_end_times') else []
-            beam_words = best_beam.words if hasattr(best_beam, 'words') else []
-            for i, word in enumerate(beam_words):
-                if word.strip():
-                    s = word_starts[i] * tick_size if i < len(word_starts) else 0
-                    e = word_ends[i] * tick_size if i < len(word_ends) else 0
-                    words.append({"text": word, "start": round(s, 3), "end": round(e, 3)})
+        text = text.strip()
 
         if sys.stderr:
             sys.stderr.write("95%\n")
 
-        # Format into Buzz segments
-        segments = _format_as_segments(words)
+        # Build segments from decoded text
+        segments = []
+        if not text:
+            if sys.stderr:
+                sys.stderr.write("100%\n")
+            return segments
+
+        # Try to get word-level timestamps from beam results
+        words = []
+        try:
+            beams = decoder.decode_beams(merged_clipped, beam_width=5)
+            if beams:
+                best_beam = beams[0]
+                # Try text_frames: list of (word, (start_frame, end_frame))
+                text_frames = getattr(best_beam, 'text_frames', None)
+                if text_frames:
+                    for word, (s, e) in text_frames:
+                        if word.strip():
+                            words.append({
+                                "text": word,
+                                "start": round(s * tick_size, 3),
+                                "end": round(e * tick_size, 3),
+                            })
+                else:
+                    # Try word_start_times / word_end_times
+                    ws = getattr(best_beam, 'word_start_times', None)
+                    we = getattr(best_beam, 'word_end_times', None)
+                    wl = getattr(best_beam, 'words', None) or getattr(best_beam, '_words', None)
+                    if wl and ws and we:
+                        for i, word in enumerate(wl):
+                            if word.strip() and i < len(ws) and i < len(we):
+                                words.append({
+                                    "text": word,
+                                    "start": round(ws[i] * tick_size, 3),
+                                    "end": round(we[i] * tick_size, 3),
+                                })
+        except Exception:
+            logging.exception("Failed to get word timestamps from beam search")
+
+        if words:
+            segments = _format_as_segments(words)
+        else:
+            # Fallback: single segment with full text
+            duration_ms = int(length * 1000)
+            segments = [Segment(start=0, end=duration_ms, text=text, translation="")]
 
         if sys.stderr:
             sys.stderr.write("100%\n")
