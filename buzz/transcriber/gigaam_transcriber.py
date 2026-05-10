@@ -239,27 +239,24 @@ class GigaAMTranscriber:
             )
 
         # Decode with beam search
-        from pyctcdecode.constants import DEFAULT_PRUNE_BEAMS
-        from pyctcdecode.language_model import HotwordScorer
-
         merged_clipped = merged.clip(np.log(1e-15), 0)
 
-        beams = decoder._decode_logits(
-            merged_clipped,
-            beam_width=100,
-            beam_prune_logp=-10,
-            token_min_logp=-5,
-            prune_history=DEFAULT_PRUNE_BEAMS,
-            hotword_scorer=HotwordScorer.build_scorer(None, weight=10.0),
-            lm_start_state=None,
-        )
+        text = decoder.decode(merged_clipped, beam_width=100)
 
-        # Get best beam with word timestamps
-        top_text, top_frames = max(beams, key=lambda b: b[1] + b[4])
-        words = [
-            {"text": word, "start": round(s * tick_size, 3), "end": round(e * tick_size, 3)}
-            for word, (s, e) in top_frames
-        ]
+        # Get word-level timestamps from the best beam
+        beams = decoder.decode_beams(merged_clipped, beam_width=100)
+        if beams:
+            best_beam = beams[0]
+            # pyctcdecode Beam class: .text, .word_start_times, .word_end_times, .words
+            words = []
+            word_starts = best_beam.word_start_times if hasattr(best_beam, 'word_start_times') else []
+            word_ends = best_beam.word_end_times if hasattr(best_beam, 'word_end_times') else []
+            beam_words = best_beam.words if hasattr(best_beam, 'words') else []
+            for i, word in enumerate(beam_words):
+                if word.strip():
+                    s = word_starts[i] * tick_size if i < len(word_starts) else 0
+                    e = word_ends[i] * tick_size if i < len(word_ends) else 0
+                    words.append({"text": word, "start": round(s, 3), "end": round(e, 3)})
 
         if sys.stderr:
             sys.stderr.write("95%\n")
