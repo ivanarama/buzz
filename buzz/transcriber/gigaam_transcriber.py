@@ -164,8 +164,8 @@ class GigaAMTranscriber:
             sys.stderr.write("20%\n")
 
         # Build vocab from model config (character-level for v3_ctc)
-        vocabulary = gigaam_model.decoding.vocabulary
-        blank_id: int = len(vocabulary)
+        vocabulary = gigaam_model.decoding.tokenizer.vocab
+        blank_id: int = gigaam_model.decoding.blank_id
         vocab = list(vocabulary)
         vocab.insert(blank_id, "")
 
