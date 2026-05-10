@@ -153,12 +153,22 @@ class GigaAMTranscriber:
             cache_dir=model_root_dir,
         )
         gigaam_model = model_wrapper.model
-        gigaam_model.to(device).eval()
+
+        # Test CUDA compatibility with a dummy forward pass
         if device == "cuda":
             try:
-                gigaam_model.encoder.half()
+                gigaam_model.to(device).eval()
+                dummy = torch.zeros(1, 16000, device=device)
+                dummy_len = torch.tensor([16000], device=device)
+                with torch.inference_mode():
+                    gigaam_model.forward(dummy, dummy_len)
+                del dummy, dummy_len
             except (RuntimeError, torch.AcceleratorError):
-                pass
+                logging.warning("GigaAM CUDA not supported on this device, falling back to CPU")
+                device = "cpu"
+                gigaam_model.to(device)
+
+        gigaam_model.eval()
 
         if sys.stderr:
             sys.stderr.write("20%\n")
