@@ -110,16 +110,23 @@ def _merge_ctc_log_probs_by_blank_sep(segments, log_probs, tick_size, blank_id):
     return np.concatenate(parts, axis=0)
 
 
-def _format_as_segments(words: list[dict], pause_threshold: float = 0.5) -> List[Segment]:
+def _format_as_segments(
+    words: list[dict],
+    pause_threshold: float = 0.4,
+    max_duration: float = 12.0,
+) -> List[Segment]:
     if not words:
         return []
 
     groups: list[list[dict]] = [[words[0]]]
     for i in range(1, len(words)):
-        if words[i]["start"] - words[i - 1]["end"] > pause_threshold:
+        group = groups[-1]
+        pause = words[i]["start"] - words[i - 1]["end"]
+        seg_duration = words[i]["end"] - group[0]["start"]
+        if pause > pause_threshold or seg_duration > max_duration:
             groups.append([words[i]])
         else:
-            groups[-1].append(words[i])
+            group.append(words[i])
 
     segments = []
     for seg_words in groups:
@@ -133,12 +140,9 @@ def _format_as_segments(words: list[dict], pause_threshold: float = 0.5) -> List
 
 
 def _ctc_to_word_timestamps(log_probs, vocab, blank_id, tick_size):
-    """Extract word-level timestamps from CTC log probabilities via argmax alignment."""
     best_path = np.argmax(log_probs, axis=1)
 
-    # Collapse repeated tokens and remove blanks,
-    # tracking the first and last frame for each emitted character.
-    emitted = []  # list of (char_id, first_frame, last_frame)
+    emitted = []
     prev = blank_id
 
     for frame_idx, token_id in enumerate(best_path):
@@ -146,18 +150,16 @@ def _ctc_to_word_timestamps(log_probs, vocab, blank_id, tick_size):
             prev = token_id
             continue
         if token_id == prev:
-            # Same as previous – extend the range
             if emitted:
                 emitted[-1] = (emitted[-1][0], emitted[-1][1], frame_idx)
             continue
-        # New character
         emitted.append((token_id, frame_idx, frame_idx))
         prev = token_id
 
-    # Group characters into words (split on space)
     words = []
     current_chars = []
     word_start_frame = 0
+    last_char_end_frame = 0
 
     for char_id, start_frame, end_frame in emitted:
         char = vocab[char_id]
@@ -166,20 +168,20 @@ def _ctc_to_word_timestamps(log_probs, vocab, blank_id, tick_size):
                 words.append({
                     "text": "".join(current_chars),
                     "start": round(word_start_frame * tick_size, 3),
-                    "end": round(end_frame * tick_size, 3),
+                    "end": round(last_char_end_frame * tick_size, 3),
                 })
                 current_chars = []
         else:
             if not current_chars:
                 word_start_frame = start_frame
             current_chars.append(char)
+            last_char_end_frame = end_frame
 
-    # Last word
     if current_chars:
         words.append({
             "text": "".join(current_chars),
             "start": round(word_start_frame * tick_size, 3),
-            "end": round(emitted[-1][2] * tick_size, 3),
+            "end": round(last_char_end_frame * tick_size, 3),
         })
 
     return words
