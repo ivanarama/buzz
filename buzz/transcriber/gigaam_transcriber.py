@@ -132,6 +132,59 @@ def _format_as_segments(words: list[dict], pause_threshold: float = 0.5) -> List
     return segments
 
 
+def _ctc_to_word_timestamps(log_probs, vocab, blank_id, tick_size):
+    """Extract word-level timestamps from CTC log probabilities via argmax alignment."""
+    best_path = np.argmax(log_probs, axis=1)
+
+    # Collapse repeated tokens and remove blanks,
+    # tracking the first and last frame for each emitted character.
+    emitted = []  # list of (char_id, first_frame, last_frame)
+    prev = blank_id
+
+    for frame_idx, token_id in enumerate(best_path):
+        if token_id == blank_id:
+            prev = token_id
+            continue
+        if token_id == prev:
+            # Same as previous – extend the range
+            if emitted:
+                emitted[-1] = (emitted[-1][0], emitted[-1][1], frame_idx)
+            continue
+        # New character
+        emitted.append((token_id, frame_idx, frame_idx))
+        prev = token_id
+
+    # Group characters into words (split on space)
+    words = []
+    current_chars = []
+    word_start_frame = 0
+
+    for char_id, start_frame, end_frame in emitted:
+        char = vocab[char_id]
+        if char in (' ', '|'):
+            if current_chars:
+                words.append({
+                    "text": "".join(current_chars),
+                    "start": round(word_start_frame * tick_size, 3),
+                    "end": round(end_frame * tick_size, 3),
+                })
+                current_chars = []
+        else:
+            if not current_chars:
+                word_start_frame = start_frame
+            current_chars.append(char)
+
+    # Last word
+    if current_chars:
+        words.append({
+            "text": "".join(current_chars),
+            "start": round(word_start_frame * tick_size, 3),
+            "end": round(emitted[-1][2] * tick_size, 3),
+        })
+
+    return words
+
+
 class GigaAMTranscriber:
     @staticmethod
     def transcribe(task: FileTranscriptionTask) -> List[Segment]:
@@ -254,37 +307,8 @@ class GigaAMTranscriber:
                 sys.stderr.write("100%\n")
             return segments
 
-        # Try to get word-level timestamps from beam results
-        words = []
-        try:
-            beams = decoder.decode_beams(merged_clipped, beam_width=5)
-            if beams:
-                best_beam = beams[0]
-                # Try text_frames: list of (word, (start_frame, end_frame))
-                text_frames = getattr(best_beam, 'text_frames', None)
-                if text_frames:
-                    for word, (s, e) in text_frames:
-                        if word.strip():
-                            words.append({
-                                "text": word,
-                                "start": round(s * tick_size, 3),
-                                "end": round(e * tick_size, 3),
-                            })
-                else:
-                    # Try word_start_times / word_end_times
-                    ws = getattr(best_beam, 'word_start_times', None)
-                    we = getattr(best_beam, 'word_end_times', None)
-                    wl = getattr(best_beam, 'words', None) or getattr(best_beam, '_words', None)
-                    if wl and ws and we:
-                        for i, word in enumerate(wl):
-                            if word.strip() and i < len(ws) and i < len(we):
-                                words.append({
-                                    "text": word,
-                                    "start": round(ws[i] * tick_size, 3),
-                                    "end": round(we[i] * tick_size, 3),
-                                })
-        except Exception:
-            logging.exception("Failed to get word timestamps from beam search")
+        # Extract word-level timestamps from CTC log probabilities
+        words = _ctc_to_word_timestamps(merged, vocab, blank_id, tick_size)
 
         if words:
             segments = _format_as_segments(words)
