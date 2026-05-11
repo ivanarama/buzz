@@ -35,6 +35,17 @@ def _find_ffprobe() -> str:
     return "ffprobe"
 
 
+def _subprocess_args() -> dict:
+    kwargs = {}
+    if sys.platform == "win32":
+        si = subprocess.STARTUPINFO()
+        si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        si.wShowWindow = subprocess.SW_HIDE
+        kwargs["startupinfo"] = si
+        kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
+    return kwargs
+
+
 def probe_video(file_path: str) -> dict:
     """Returns dict with duration_ms, fps, width, height, has_video."""
     ffprobe = _find_ffprobe()
@@ -42,6 +53,7 @@ def probe_video(file_path: str) -> dict:
         [ffprobe, "-v", "quiet", "-print_format", "json",
          "-show_streams", "-show_format", file_path],
         capture_output=True, check=True, text=True,
+        **_subprocess_args(),
     )
     info = json.loads(result.stdout)
 
@@ -120,6 +132,7 @@ class FfmpegFrameReader:
         try:
             self._proc = subprocess.Popen(
                 cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                **_subprocess_args(),
             )
             frame_ms = 1000.0 / self._fps
             pos = self._start_ms

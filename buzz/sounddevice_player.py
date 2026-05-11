@@ -25,6 +25,17 @@ def _find_ffmpeg() -> str:
     return "ffmpeg"
 
 
+def _subprocess_args() -> dict:
+    kwargs = {}
+    if sys.platform == "win32":
+        si = subprocess.STARTUPINFO()
+        si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        si.wShowWindow = subprocess.SW_HIDE
+        kwargs["startupinfo"] = si
+        kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
+    return kwargs
+
+
 def decode_audio_to_wav(input_path: str, output_wav: str) -> None:
     ffmpeg = _find_ffmpeg()
     subprocess.run(
@@ -32,6 +43,7 @@ def decode_audio_to_wav(input_path: str, output_wav: str) -> None:
          "-f", "wav", output_wav],
         capture_output=True,
         check=True,
+        **_subprocess_args(),
     )
 
 

@@ -24,7 +24,14 @@ def _load_audio(file_path: str, sr: int = SAMPLE_RATE) -> np.ndarray:
         "-f", "s16le", "-ac", "1", "-acodec", "pcm_s16le",
         "-ar", str(sr), "-",
     ]
-    out = subprocess.run(cmd, capture_output=True, check=True).stdout
+    kwargs = {}
+    if sys.platform == "win32":
+        si = subprocess.STARTUPINFO()
+        si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        si.wShowWindow = subprocess.SW_HIDE
+        kwargs["startupinfo"] = si
+        kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
+    out = subprocess.run(cmd, capture_output=True, check=True, **kwargs).stdout
     return np.frombuffer(out, np.int16).astype(np.float32) / 32768.0
 
 
