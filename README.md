@@ -1,3 +1,12 @@
+## Публикации
+
+[**Этот репозиторий использован в статье на Инфостарт**](https://infostart.ru/1c/articles/2748070/)
+
+<img src="https://infostart.ru/bitrix/templates/sandbox_empty/assets/tpl/abo/img/logo.svg" alt="Инфостарт" width="120">
+
+---
+
+
 [[简体中文](readme/README.zh_CN.md)] <- 点击查看中文页面。
 
 # Buzz
